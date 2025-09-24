@@ -20,8 +20,18 @@ namespace Microsoft.Maui.Controls.Extensions
     {
         public static readonly BindableProperty AspectRequestProperty = BindableProperty.CreateAttached(nameof(GetAspectRequest).Substring(3), typeof(double), typeof(VisualElement), -1.0, defaultValueCreator: bindable =>
         {
+            //((Controls.VisualElement)bindable).WidthRequest = 150;
+            //return -1d;
             AspectRequestSetup((Controls.VisualElement)bindable);
-            return -1.0;
+            return -1d;
+            ((Controls.VisualElement)bindable).SizeChanged += async (sender, e) =>
+            {
+                await Task.Delay(500);
+
+                var ve = (Controls.VisualElement)sender;
+                ve.WidthRequest = 150;
+            };
+            return -1d;
         });
 
         public static double GetAspectRequest(this Controls.VisualElement bindable) => (double)bindable.GetValue(AspectRequestProperty);
@@ -29,12 +39,12 @@ namespace Microsoft.Maui.Controls.Extensions
 
         private static void AspectRequestSetup(Controls.VisualElement visualElement)
         {
-            BindableProperty dimensionProperty = null!;
+            BindableProperty? dimensionProperty = null;
 
-            EventHandler sizeChanged = null!;
-            EventHandler measureInvalidated = null!;
+            visualElement.SizeChanged += sizeChanged;
+            sizeChanged(visualElement, EventArgs.Empty);
 
-            sizeChanged = async (sender, e) =>
+            async void sizeChanged(object? sender, EventArgs e)
             {
                 var ve = sender as Controls.VisualElement;
                 if (ve == null)
@@ -56,12 +66,13 @@ namespace Microsoft.Maui.Controls.Extensions
                     return;
                 }
 
+                //Print.Log(ve.Height);
                 var aspect = ve.GetAspectRequest();
-                if (AreSameSize(ve.Width / ve.Height, aspect))
+                if (AreSameSize(ve.Height * aspect, ve.Width))
                 {
-                    return;
+                    //return;
                 }
-
+                
                 bool adjustWidth;
                 // WidthRequest was set, and not by us - leave it alone
                 if (ve.IsSet(Controls.VisualElement.WidthRequestProperty) && dimensionProperty != Controls.VisualElement.WidthRequestProperty)
@@ -87,13 +98,14 @@ namespace Microsoft.Maui.Controls.Extensions
                         adjustWidth = widthFlexible;
                     }
                 }
-
+                
+                // Make sure we start a new layout cycle
                 await Task.Delay(1);
 
-                ve.SizeChanged -= sizeChanged;
+                //ve.SizeChanged -= sizeChanged;
                 ve.MeasureInvalidated -= measureInvalidated;
 
-                measureInvalidated(ve, e);
+                //measureInvalidated(ve, e);
 
                 if (adjustWidth)
                 {
@@ -107,10 +119,10 @@ namespace Microsoft.Maui.Controls.Extensions
                 }
 
                 ve.MeasureInvalidated += measureInvalidated;
-                ve.SizeChanged += sizeChanged;
-            };
+                //ve.SizeChanged += sizeChanged;
+            }
 
-            measureInvalidated = async (sender, e) =>
+            void measureInvalidated(object? sender, EventArgs e)
             {
                 var ve = sender as Controls.VisualElement;
                 if (ve == null)
@@ -118,9 +130,11 @@ namespace Microsoft.Maui.Controls.Extensions
                     return;
                 }
 
+                ve.SizeChanged += sizeChanged;
+
                 if (dimensionProperty != null && ve.IsSet(dimensionProperty))
                 {
-                    await Task.Delay(1);
+                    //await Task.Delay(1);
 
                     if (dimensionProperty == Controls.VisualElement.WidthRequestProperty)
                     {
@@ -131,12 +145,7 @@ namespace Microsoft.Maui.Controls.Extensions
                         ve.HeightRequest = -1;
                     }
                 }
-            };
-
-            visualElement.MeasureInvalidated += measureInvalidated;
-            visualElement.SizeChanged += sizeChanged;
-
-            sizeChanged(visualElement, EventArgs.Empty);
+            }
         }
 
         private static bool AreSameSize(double size1, double size2) => Math.Abs(size1 - size2) < 1;
