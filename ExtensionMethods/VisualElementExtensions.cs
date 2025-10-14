@@ -39,7 +39,7 @@ namespace Microsoft.Maui.Controls.Extensions
 
         private static void AspectRequestSetup(Controls.VisualElement visualElement)
         {
-            BindableProperty? dimensionProperty = null;
+            bool controlWidth = false, controlHeight = false;
 
             visualElement.SizeChanged += sizeChanged;
             sizeChanged(visualElement, EventArgs.Empty);
@@ -51,71 +51,72 @@ namespace Microsoft.Maui.Controls.Extensions
                 {
                     return;
                 }
+                // Initial layout hasn't happened yet
                 else if (ve.Frame.Size == Size.Zero || ve.Width < 0 || ve.Height < 0)
                 {
                     return;
                 }
                 // We tried to set the width, and it didn't work
-                else if (dimensionProperty == Controls.VisualElement.WidthRequestProperty && !AreSameSize(ve.Width, ve.WidthRequest))
+                else if (controlWidth && !AreSameSize(ve.Width, ve.WidthRequest))
                 {
-                    return;
+                    //return;
                 }
                 // We tried to set the height, and it didn't work
-                else if (dimensionProperty == Controls.VisualElement.HeightRequestProperty && !AreSameSize(ve.Height, ve.HeightRequest))
+                else if (controlHeight && !AreSameSize(ve.Height, ve.HeightRequest))
                 {
-                    return;
+                    //return;
                 }
 
                 //Print.Log(ve.Height);
                 var aspect = ve.GetAspectRequest();
+                //Print.Log(ve.Height, ve.Width * aspect);
                 if (AreSameSize(ve.Height * aspect, ve.Width))
                 {
-                    //return;
+                    return;
                 }
-                
-                bool adjustWidth;
+
+                var adjustWidth = ve.Width / ve.Height < aspect;
+
                 // WidthRequest was set, and not by us - leave it alone
-                if (ve.IsSet(Controls.VisualElement.WidthRequestProperty) && dimensionProperty != Controls.VisualElement.WidthRequestProperty)
+                if (ve.IsSet(Controls.VisualElement.WidthRequestProperty) && !controlWidth)
                 {
-                    adjustWidth = false;
+                    controlWidth = false;
+                    controlHeight = true;
                 }
                 // HeightRequest was set, and not by us - leave it alone
-                else if (ve.IsSet(Controls.VisualElement.HeightRequestProperty) && dimensionProperty != Controls.VisualElement.HeightRequestProperty)
+                else if (ve.IsSet(Controls.VisualElement.HeightRequestProperty) && !controlHeight)
                 {
-                    adjustWidth = true;
+                    controlWidth = true;
+                    controlHeight = false;
                 }
                 else
                 {
-                    var widthFlexible = ve.DesiredSize.Width == ve.Width;
-                    var heightFlexible = ve.DesiredSize.Height == ve.Height;
+                    controlWidth = ve.DesiredSize.Width == ve.Width;
+                    controlHeight = ve.DesiredSize.Height == ve.Height;
 
-                    if (widthFlexible == heightFlexible)
+                    // View is likely constrained in both directions by its parent - make it smaller so we don't overflow bounds
+                    if (!controlWidth && !controlHeight)
                     {
-                        adjustWidth = widthFlexible == ve.Width / ve.Height < aspect;
-                    }
-                    else
-                    {
-                        adjustWidth = widthFlexible;
+                        controlWidth = !(controlHeight = adjustWidth);
                     }
                 }
-                
+
                 // Make sure we start a new layout cycle
                 await Task.Delay(1);
 
                 //ve.SizeChanged -= sizeChanged;
                 ve.MeasureInvalidated -= measureInvalidated;
 
-                //measureInvalidated(ve, e);
+                //measureInvalidated(ve, e);                
 
-                if (adjustWidth)
+                // If view is completely unconstrained, we should control both dimensions to avoid the view trying to remeasure itself if one is changed
+                if (controlWidth)
                 {
-                    dimensionProperty = Controls.VisualElement.WidthRequestProperty;
-                    ve.WidthRequest = ve.Height * aspect;
+                    ve.WidthRequest = controlHeight && !adjustWidth ? ve.Width : ve.Height * aspect;
                 }
-                else
+                if (controlHeight)
                 {
-                    dimensionProperty = Controls.VisualElement.HeightRequestProperty;
-                    ve.HeightRequest = ve.Width / aspect;
+                    ve.HeightRequest = controlWidth && adjustWidth ? ve.Height : ve.Width / aspect;
                 }
 
                 ve.MeasureInvalidated += measureInvalidated;
@@ -130,20 +131,18 @@ namespace Microsoft.Maui.Controls.Extensions
                     return;
                 }
 
+                ve.SizeChanged -= sizeChanged;
                 ve.SizeChanged += sizeChanged;
 
-                if (dimensionProperty != null && ve.IsSet(dimensionProperty))
-                {
-                    //await Task.Delay(1);
+                //await Task.Delay(1);
 
-                    if (dimensionProperty == Controls.VisualElement.WidthRequestProperty)
-                    {
-                        ve.WidthRequest = -1;
-                    }
-                    else if (dimensionProperty == Controls.VisualElement.HeightRequestProperty)
-                    {
-                        ve.HeightRequest = -1;
-                    }
+                if (controlWidth)
+                {
+                    ve.WidthRequest = -1;
+                }
+                else if (controlHeight)
+                {
+                    ve.HeightRequest = -1;
                 }
             }
         }
