@@ -1,17 +1,23 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.Maui.Controls.Compatibility;
+﻿using Microsoft.Maui.Controls.Compatibility;
 using Microsoft.Maui.Layouts;
-using Microsoft.Maui.Graphics;
 
 namespace Microsoft.Maui.Controls
 {
     public static class ViewExtensions
     {
-        //public static BindableProperty Test = BindableProperty.CreateAttached("test", null, null, null);
+        public static readonly BindableProperty GestureRecognizersProperty = BindableProperty.CreateAttached(nameof(GetGestureRecognizers).Substring(3), typeof(DataTemplate), typeof(View), null, propertyChanged: GestureRecognizersChanged);
+
+        public static DataTemplate GetGestureRecognizers(this View view) => (DataTemplate)view.GetValue(GestureRecognizersProperty);
+        public static void SetGestureRecognizers(this View view, DataTemplate value) => view.SetValue(GestureRecognizersProperty, value);
+
+        private static void GestureRecognizersChanged(BindableObject bindable, object _oldValue, object _newValue)
+        {
+            var view = (View)bindable;
+            var oldValue = (DataTemplate)_oldValue;
+            var newValue = (DataTemplate)_newValue;
+
+            view.GestureRecognizers.Add((IGestureRecognizer)newValue.CreateContent());
+        }
 
         public static void SetLayoutOptions(this View view, LayoutOptions layoutOptions)
         {
