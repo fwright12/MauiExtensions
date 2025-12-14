@@ -140,7 +140,7 @@ namespace Microsoft.Maui.Controls.Extensions
                 {
                     ve.WidthRequest = -1;
                 }
-                else if (controlHeight)
+                if (controlHeight)
                 {
                     ve.HeightRequest = -1;
                 }
