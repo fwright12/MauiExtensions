@@ -2,7 +2,7 @@
 
 namespace Microsoft.Maui.Controls
 {
-    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct)]
+    [AttributeUsage(AttributeTargets.Class)]
     public class BindingValueConverterAttribute : Attribute { }
 
     public class ConverterExtension : ServicesInstanceExtension { }

@@ -20,20 +20,11 @@ namespace Microsoft.Maui.Controls.Extensions
     {
         public static readonly BindableProperty AspectRequestProperty = BindableProperty.CreateAttached(nameof(GetAspectRequest).Substring(3), typeof(double), typeof(VisualElement), -1.0, defaultValueCreator: bindable =>
         {
-            //((Controls.VisualElement)bindable).WidthRequest = 150;
-            //return -1d;
             AspectRequestSetup((Controls.VisualElement)bindable);
-            return -1d;
-            ((Controls.VisualElement)bindable).SizeChanged += async (sender, e) =>
-            {
-                await Task.Delay(500);
-
-                var ve = (Controls.VisualElement)sender;
-                ve.WidthRequest = 150;
-            };
             return -1d;
         });
 
+        [TypeConverter(typeof(AspectRatioConverter))]
         public static double GetAspectRequest(this Controls.VisualElement bindable) => (double)bindable.GetValue(AspectRequestProperty);
         public static void SetAspectRequest(this Controls.VisualElement bindable, double value) => bindable.SetValue(AspectRequestProperty, value);
 
@@ -69,8 +60,7 @@ namespace Microsoft.Maui.Controls.Extensions
 
                 //Print.Log(ve.Height);
                 var aspect = ve.GetAspectRequest();
-                //Print.Log(ve.Height, ve.Width * aspect);
-                if (AreSameSize(ve.Height * aspect, ve.Width))
+                if (AreSameSize(ve.Height * aspect, ve.Width, 1.0f))
                 {
                     return;
                 }
@@ -91,8 +81,8 @@ namespace Microsoft.Maui.Controls.Extensions
                 }
                 else
                 {
-                    controlWidth = ve.DesiredSize.Width == ve.Width;
-                    controlHeight = ve.DesiredSize.Height == ve.Height;
+                    controlWidth = AreSameSize(ve.DesiredSize.Width, ve.Width);
+                    controlHeight = AreSameSize(ve.DesiredSize.Height, ve.Height);
 
                     // View is likely constrained in both directions by its parent - make it smaller so we don't overflow bounds
                     if (!controlWidth && !controlHeight)
@@ -147,7 +137,8 @@ namespace Microsoft.Maui.Controls.Extensions
             }
         }
 
-        private static bool AreSameSize(double size1, double size2) => Math.Abs(size1 - size2) < 1;
+        private static bool AreSameSize(double size1, double size2) => AreSameSize(size1, size2, 0.001f);
+        private static bool AreSameSize(double size1, double size2, float tolerance) => Math.Abs(size1 - size2) < tolerance;
 
         public static Point PositionOn(this Controls.VisualElement child, Controls.VisualElement parent = null)
         {
