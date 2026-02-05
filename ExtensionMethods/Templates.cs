@@ -8,7 +8,7 @@ namespace Microsoft.Maui.Controls.Extensions
     {
         public BindableObject? Container { get; set; }
 
-        public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture) => Templates.CreateView(Container!, value, parameter as DataTemplate);
+        public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture) => value == null && parameter is DataTemplateSelector ? null : Templates.CreateView(Container!, value, parameter as DataTemplate);
 
         public object? ConvertBack(View? value, Type targetType, object? parameter, CultureInfo culture) => value?.BindingContext ?? value;
     }
@@ -52,6 +52,11 @@ namespace Microsoft.Maui.Controls.Extensions
             {
                 if (template is DataTemplateSelector selector)
                 {
+                    if (obj == null)
+                    {
+                        throw new ArgumentNullException($"{nameof(obj)} cannot be null when using a DataTemplateSelector");
+                    }
+
                     template = selector.SelectTemplate(obj, container);
                 }
 

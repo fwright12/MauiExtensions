@@ -24,7 +24,7 @@ namespace MauiExtensions.Platforms.Android
                         ? AndroidX.RecyclerView.Widget.LinearLayoutManager.Horizontal
                         : AndroidX.RecyclerView.Widget.LinearLayoutManager.Vertical;
 
-                    return new LinearLayoutManager(Context, orientation, listItemsLayout.GetItemSizeGridLength(), false);
+                    return new LinearLayoutManager(Context, orientation, GridLength.Auto, false);
             }
 
             return base.SelectLayoutManager(layoutSpecification);
@@ -34,7 +34,7 @@ namespace MauiExtensions.Platforms.Android
         {
             base.LayoutPropertyChanged(sender, propertyChanged);
 
-            if (propertyChanged.PropertyName == Microsoft.Maui.Controls.Extensions.LinearItemsLayout.ItemSizeProperty.PropertyName)
+            if (propertyChanged.PropertyName == "ItemSize")
             {
                 GetLayoutManager()?.RequestLayout();
             }
