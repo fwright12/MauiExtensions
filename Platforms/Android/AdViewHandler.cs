@@ -1,8 +1,8 @@
 ﻿using Android.Content;
-using Android.Gms.Ads;
+//using Android.Gms.Ads;
 using Microsoft.Maui.Handlers;
 using Microsoft.Maui.Platform;
-using AndroidAdView = Android.Gms.Ads.AdView;
+using AndroidAdView = Android.Widget.TextView;// Android.Gms.Ads.AdView;
 using MauiAdView = Microsoft.Maui.Controls.AdView;
 
 namespace Microsoft.Maui.Controls
@@ -13,7 +13,7 @@ namespace Microsoft.Maui.Controls
         {
             new Java.Lang.Thread(() =>
             {
-                MobileAds.Initialize(ApplicationModel.Platform.AppContext);
+                //MobileAds.Initialize(ApplicationModel.Platform.AppContext);
             }).Start();
 
             return builder;
@@ -27,25 +27,25 @@ namespace MauiExtensions.Handlers
     {
         public static void MapAdUnitId(AdViewHandler handler, MauiAdView adView)
         {
-            handler.PlatformView.AdUnitId = adView.AdUnitID;
+            //handler.PlatformView.AdUnitId = adView.AdUnitID;
             Reload(handler.PlatformView);
         }
 
         public static void MapAdSize(AdViewHandler handler, MauiAdView adView)
         {
-            var adSize = GetAdSize(handler.PlatformView.Context!, adView.AdSize, adView);
-            handler.PlatformView.AdSize = adSize;
+            //var adSize = GetAdSize(handler.PlatformView.Context!, adView.AdSize, adView);
+            //handler.PlatformView.AdSize = adSize;
 
             if (adView.HeightRequest == MauiAdView.InlineBannerHeight)
             {
-                handler.PlatformView.AdListener = new Listener(() =>
-                {
-                    try
-                    {
-                        adView.HeightRequest = handler.PlatformView.AdSize.Height;
-                    }
-                    catch { }
-                });
+                //handler.PlatformView.AdListener = new Listener(() =>
+                //{
+                //    try
+                //    {
+                //        adView.HeightRequest = handler.PlatformView.AdSize.Height;
+                //    }
+                //    catch { }
+                //});
             }
             else
             {
@@ -68,49 +68,49 @@ namespace MauiExtensions.Handlers
         {
             base.DisconnectHandler(platformView);
 
-            platformView.Destroy();
+            //platformView.Destroy();
         }
 
         private static void Reload(AndroidAdView adView)
         {
-            adView.LoadAd(new AdRequest.Builder().Build());
+            //adView.LoadAd(new AdRequest.Builder().Build());
         }
 
-        private static AdSize GetAdSize(Context context, AdSizes adSize, MauiAdView adView)
-        {
-            if (adSize == AdSizes.Banner)
-            {
-                return AdSize.Banner;
-            }
-            else if (adSize == AdSizes.MediumRectangle)
-            {
-                return AdSize.MediumRectangle;
-            }
-            else if (adView.HeightRequest == MauiAdView.InlineBannerHeight)
-            {
-                return AdSize.GetCurrentOrientationInlineAdaptiveBannerAdSize(context, (int)adView.WidthRequest);
-            }
-            else
-            {
-                return new AdSize((int)adView.WidthRequest, (int)adView.HeightRequest);
-            }
-        }
+        //private static AdSize GetAdSize(Context context, AdSizes adSize, MauiAdView adView)
+        //{
+        //    if (adSize == AdSizes.Banner)
+        //    {
+        //        return AdSize.Banner;
+        //    }
+        //    else if (adSize == AdSizes.MediumRectangle)
+        //    {
+        //        return AdSize.MediumRectangle;
+        //    }
+        //    else if (adView.HeightRequest == MauiAdView.InlineBannerHeight)
+        //    {
+        //        return AdSize.GetCurrentOrientationInlineAdaptiveBannerAdSize(context, (int)adView.WidthRequest);
+        //    }
+        //    else
+        //    {
+        //        return new AdSize((int)adView.WidthRequest, (int)adView.HeightRequest);
+        //    }
+        //}
 
-        private class Listener : AdListener
-        {
-            private Action OnLoaded;
+        //private class Listener : AdListener
+        //{
+        //    private Action OnLoaded;
 
-            public Listener(Action onLoaded)
-            {
-                OnLoaded = onLoaded;
-            }
+        //    public Listener(Action onLoaded)
+        //    {
+        //        OnLoaded = onLoaded;
+        //    }
 
-            public override void OnAdLoaded()
-            {
-                base.OnAdLoaded();
-                OnLoaded();
-            }
-        }
+        //    public override void OnAdLoaded()
+        //    {
+        //        base.OnAdLoaded();
+        //        OnLoaded();
+        //    }
+        //}
     }
 }
 

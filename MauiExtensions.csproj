@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFrameworks>net9.0-android;net9.0-ios;net9.0-maccatalyst;net9.0</TargetFrameworks>
+		<TargetFrameworks>net10.0-android;net10.0-ios;net10.0-maccatalyst;net10.0</TargetFrameworks>
 		<!-- Uncomment to also build the tizen app. You will need to install tizen by following this: https://github.com/Samsung/Tizen.NET -->
 		<!-- <TargetFrameworks>$(TargetFrameworks);net8.0-tizen</TargetFrameworks> -->
 
@@ -22,25 +22,25 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Maui.Controls" Version="9.0.80" />
-		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="9.0.80" />
+		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.31" />
+		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="10.0.31" />
 		<PackageReference Include="Xamarin.Google.iOS.MobileAds" Version="8.13.0.3" />
 	</ItemGroup>
 
 	<!-- Android -->
-	<ItemGroup Condition="$(TargetFramework.StartsWith('net9.0-android')) != true">
+	<ItemGroup Condition="$(TargetFramework.Contains('-android')) != true">
 		<Compile Remove="**\Android\**\*.cs" />
 		<None Include="**\Android\**\*.cs" Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder)" />
 	</ItemGroup>
 	
 	<!-- iOS -->
-	<ItemGroup Condition="$(TargetFramework.StartsWith('net9.0-ios')) != true">
+	<ItemGroup Condition="$(TargetFramework.Contains('-ios')) != true">
 		<Compile Remove="**\iOS\**\*.cs" />
 		<None Include="**\iOS\**\*.cs" Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder)" />
 	</ItemGroup>
 
 	<!-- Mac Catalyst -->
-	<ItemGroup Condition="$(TargetFramework.StartsWith('net9.0-maccatalyst')) != true">
+	<ItemGroup Condition="$(TargetFramework.Contains('-maccatalyst')) != true">
 		<Compile Remove="**\MacCatalyst\**\*.cs" />
 		<None Include="**\MacCatalyst\**\*.cs" Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder)" />
 	</ItemGroup>
@@ -51,7 +51,7 @@
 		<None Include="**\Windows\**\*.cs" Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder)" />
 	</ItemGroup>
 	
-	<ItemGroup Condition="'$(TargetFramework)' != 'net9.0'">
+	<ItemGroup Condition="'$(TargetFramework)' != 'net10.0'">
 		<Compile Remove="**\None\**\*.cs" />
 		<None Include="**\None\**\*.cs" Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder)" />
 	</ItemGroup>
@@ -88,10 +88,10 @@
 		</MauiXaml>
 	</ItemGroup>
 
-	<ItemGroup Condition="'$(TargetFramework)' == 'net9.0-android'">
+	<!--<ItemGroup Condition="$(TargetFramework.Contains('-android')) == true">
 	  <PackageReference Include="Xamarin.GooglePlayServices.Ads.Lite">
-	    <Version>124.0.0.2</Version>
+	    <Version>124.0.0.4</Version>
 	  </PackageReference>
-	</ItemGroup>
+	</ItemGroup>-->
 
 </Project>
