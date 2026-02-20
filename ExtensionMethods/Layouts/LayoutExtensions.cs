@@ -1,107 +1,132 @@
-﻿using Microsoft.Maui.Graphics;
-using System;
-using System.Collections.Generic;
-using System.Extensions;
-
-namespace Microsoft.Maui.Controls.Compatibility
+﻿namespace Microsoft.Maui.Controls.Extensions
 {
     public static class LayoutExtensions
     {
-        public static Size UsableSpace(this Layout layout) => new Size(layout.Width - layout.Padding.Left - layout.Padding.Right - layout.Margin.Left - layout.Margin.Right, layout.Height - layout.Padding.Top - layout.Padding.Bottom - layout.Margin.Top - layout.Margin.Bottom);
+        public static BindableProperty AbsoluteWidthProperty => AbsoluteWidthPropertyKey.BindableProperty;
 
-        /// <summary>
-        /// Executes <paramref name="action"/> when an element of or inherited from type <typeparamref name="T"/> is added to <paramref name="layout"/>
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="layout"></param>
-        /// <param name="action"></param>
-        public static void WhenDescendantAdded<T>(this Layout layout, Action<T> action) where T : Element => layout.WhenDescendantAdded(action, (e) => e.Element is T);
+        private static readonly BindablePropertyKey AbsoluteWidthPropertyKey = BindableProperty.CreateAttachedReadOnly(nameof(GetAbsoluteWidth).Substring(3), typeof(double), typeof(Layout), 0d, defaultValueCreator: bindable => DefaultAbsoluteSizeCreator(bindable, AbsoluteHeightProperty));
 
-        /// <summary>
-        /// Executes <paramref name="action"/> when an element of type <typeparamref name="T"/> is added to <paramref name="layout"/>. <paramref name="action"/> will not be applied to types that inherit from <typeparamref name="T"/>
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="layout"></param>
-        /// <param name="action"></param>
-        public static void WhenExactDescendantAdded<T>(this Layout layout, Action<T> action) where T : Element => layout.WhenDescendantAdded(action, (e) => e.Element.GetType() == typeof(T));
+        public static BindableProperty AbsoluteHeightProperty => AbsoluteHeightPropertyKey.BindableProperty;
 
-        private static void WhenDescendantAdded<T>(this Layout layout, Action<T> action, Func<ElementEventArgs, bool> comparer) where T : Element
+        private static readonly BindablePropertyKey AbsoluteHeightPropertyKey = BindableProperty.CreateAttachedReadOnly(nameof(GetAbsoluteHeight).Substring(3), typeof(double), typeof(Layout), 0d, defaultValueCreator: bindable => DefaultAbsoluteSizeCreator(bindable, AbsoluteWidthProperty));
+
+        private static readonly BindableProperty IsRelativeSizeProperty = BindableProperty.CreateAttached(nameof(GetIsRelativeSize).Substring(3), typeof(bool), typeof(Controls.VisualElement), false);
+
+        public static double GetAbsoluteWidth(this Layout layout) => (double)layout.GetValue(AbsoluteWidthProperty);
+        public static double GetAbsoluteHeight(this Layout layout) => (double)layout.GetValue(AbsoluteHeightProperty);
+
+        private static bool GetIsRelativeSize(this Controls.VisualElement visualElement) => visualElement.IsSet(IsRelativeSizeProperty) && (bool)visualElement.GetValue(IsRelativeSizeProperty);
+        public static void SetIsRelativeSize(Controls.VisualElement visualElement, bool value)
         {
-            layout.DescendantAdded += new IfEventHandler<ElementEventArgs>(
-                (sender, e) => comparer(e),// canBeDerivedType ? (e is T) : (e.GetType() == typeof(T)),
-                (sender, e) => action((T)e.Element)
-                );
+            visualElement.SetValue(IsRelativeSizeProperty, value);
+            if (value)
+            {
+                ChildRemoved(visualElement);
+            }
+            else if (visualElement.Parent != null && (visualElement.Parent.IsSet(AbsoluteWidthProperty) || visualElement.Parent.IsSet(AbsoluteHeightProperty)))
+            {
+                ChildAdded(visualElement);
+            }
         }
 
-        public static IEnumerable<T> GetDescendants<T>(this Layout<View> layout)
-            where T : View
+        private static double DefaultAbsoluteSizeCreator(BindableObject bindable, BindableProperty otherProperty)
         {
-            foreach(View view in layout.Children)
+            if (!bindable.IsSet(otherProperty))
             {
-                if (view is T)
+                var layout = (Layout)bindable;
+
+                layout.ChildAdded += ChildAdded;
+                layout.ChildRemoved += ChildRemoved;
+
+                foreach (var child in layout.Children.OfType<Controls.VisualElement>())
                 {
-                    yield return (T)view;
+                    ChildAdded(child);
+                }
+            }
+
+            return 0d;
+        }
+
+        private static async void ChildSizeChanged(Controls.VisualElement child)
+        {
+            if (child.Parent is not Layout layout)
+            {
+                return;
+            }
+
+            double maxWidth = 0, maxHeight = 0;
+            foreach (var sibling in layout.Children.OfType<Controls.VisualElement>())
+            {
+                if (GetIsRelativeSize(sibling))
+                {
+                    continue;
                 }
 
-                Layout<View> others = view as Layout<View> ?? (view as ContentView)?.Content as Layout<View> ?? (view as ScrollView)?.Content as Layout<View>;
+                maxWidth = Math.Max(maxWidth, sibling.Width);
+                maxHeight = Math.Max(maxHeight, sibling.Height);
+            }
 
-                if (others != null)
+            // Make sure we start a new layout cycle
+            await Task.Yield();
+
+            layout.SetValue(AbsoluteWidthPropertyKey, maxWidth);
+            layout.SetValue(AbsoluteHeightPropertyKey, maxHeight);
+        }
+
+        private static void ParentChanging(Controls.VisualElement ve)
+        {
+            if (ve.Parent == null)
+            {
+                return;
+            }
+
+            ve.Parent.ChildAdded -= ChildAdded;
+            ve.Parent.ChildRemoved -= ChildRemoved;
+
+            if (ve.Parent is Layout layout)
+            {
+                foreach (var child in layout.Children.OfType<Controls.VisualElement>())
                 {
-                    foreach (T t in others.GetDescendants<T>())
-                    {
-                        yield return t;
-                    }
+                    ChildRemoved(child);
                 }
             }
         }
 
-        public static View GetViewAt(this Layout<View> layout, Point point)
+        private static void ChildAdded(object? sender, ElementEventArgs e)
         {
-            Point temp;
-            return layout.GetViewAt(point, out temp);
+            if (e.Element is Controls.VisualElement ve)
+            {
+                ChildAdded(ve);
+            }
         }
 
-        public static View GetViewAt(this Layout<View> layout, Point point, out Point scaled)
+        private static void ChildAdded(Controls.VisualElement child)
         {
-            //int i = 0;
-            //for (; i < layout.Children.Count; i++)
-            foreach(View child in layout.Children)
+            if (!GetIsRelativeSize(child))
             {
-                //View child = layout.Children[i];
-
-                //Is the point inside the bounds that this child occupies?
-                //if (pos.X >= child.X && pos.X <= child.X + child.Width && pos.Y >= child.Y && pos.Y <= child.Y + child.Height)
-                if (child.Bounds.Contains(point))
-                {
-                    point = point.Subtract(child.Bounds.Location);
-
-                    if (child is Layout<View>)
-                    {
-                        return GetViewAt(child as Layout<View>, point, out scaled);
-                    }
-                    else
-                    {
-                        scaled = point;
-                        return child;
-                    }
-
-                    /*else if (parent.Editable())
-                    {
-                        ans = child;
-                    }*/
-                    
-                    //break;
-                }
+                child.SizeChanged += ChildSizeChanged;
             }
+        }
 
-            /*Expression e = parent as Expression;
-            if (i == parent.Children.Count && e != null && e.Editable && (pos.X <= e.PadLeft || pos.X >= e.Width - e.PadRight))
+        private static void ChildRemoved(object? sender, ElementEventArgs e)
+        {
+            if (e.Element is Controls.VisualElement ve)
             {
-                ans = parent;
-            }*/
+                ChildRemoved(ve);
+            }
+        }
 
-            scaled = point;
-            return layout;
+        private static void ChildRemoved(Controls.VisualElement ve)
+        {
+            ve.SizeChanged -= ChildSizeChanged;
+        }
+
+        private static void ChildSizeChanged(object? sender, EventArgs e)
+        {
+            if (sender is Controls.VisualElement ve)
+            {
+                ChildSizeChanged(ve);
+            }
         }
     }
 }

@@ -92,7 +92,7 @@ namespace Microsoft.Maui.Controls.Extensions
                 }
 
                 // Make sure we start a new layout cycle
-                await Task.Delay(1);
+                await Task.Yield();
 
                 //ve.SizeChanged -= sizeChanged;
                 ve.MeasureInvalidated -= measureInvalidated;

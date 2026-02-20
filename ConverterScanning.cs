@@ -15,6 +15,21 @@ namespace Microsoft.Maui.Controls
         public object? ProvideValue(IServiceProvider serviceProvider) => Type == null ? null : IPlatformApplication.Current?.Services.GetService(Type);
     }
 
+    public static class ConverterFactory
+    {
+        public static IValueConverter Create<T>() => Create(typeof(T));
+
+        public static IValueConverter Create(Type type) => IPlatformApplication.Current?.Services.GetService(type) as IValueConverter ?? Activator.CreateInstance(type) as IValueConverter ?? throw new ArgumentException($"{type} must implement {typeof(IValueConverter)}");
+    }
+
+    public static class MultiConverterFactory
+    {
+        public static IMultiValueConverter Create<T>() => Create(typeof(T));
+
+        public static IMultiValueConverter Create(Type type) => IPlatformApplication.Current?.Services.GetService(type) as IMultiValueConverter ?? Activator.CreateInstance(type) as IMultiValueConverter ?? throw new ArgumentException($"{type} must implement {typeof(IMultiValueConverter)}");
+    }
+
+
     public static class ConverterScanning
     {
         public static MauiAppBuilder RegisterConverters(this MauiAppBuilder builder)
