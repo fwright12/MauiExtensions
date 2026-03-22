@@ -157,7 +157,7 @@ namespace Microsoft.Maui.Controls.Extensions
         }
     }
 
-    public class WrapLayout : FlexLayout
+    public class WrapLayout : Controls.FlexLayout
     {
         private SizeRequest lastMeasurement;
         private Size lastValidMeasurement;// = new Size(double.PositiveInfinity, double.PositiveInfinity);

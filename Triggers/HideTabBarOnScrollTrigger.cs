@@ -93,12 +93,12 @@ namespace Microsoft.Maui.Controls
 
 namespace Microsoft.Maui.Controls.Extensions
 {
-    public class HideTabBarOnScrollTrigger : TriggerAction<ScrollView>
+    public class HideTabBarOnScrollTrigger : TriggerAction<Controls.ScrollView>
     {
         private double LastScrollX;
         private double LastScrollY;
 
-        protected override void Invoke(ScrollView sender)
+        protected override void Invoke(Controls.ScrollView sender)
         {
             Shell.SetTabBarIsVisible(sender.Parent<Page>(), sender.ScrollX < LastScrollX || sender.ScrollY < LastScrollY);
             

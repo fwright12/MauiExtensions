@@ -5,6 +5,23 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Maui.Graphics;
 
+namespace Microsoft.Maui.Controls.Extensions
+{
+    public static class ScrollView
+    {
+        public static readonly BindableProperty ContentProperty = BindableProperty.CreateAttached("Content", typeof(View), typeof(Controls.ScrollView), null, propertyChanged: (bindable, oldValue, newValue) =>
+        {
+            var scrollView = (Controls.ScrollView)bindable;
+            var content = (View)newValue;
+
+            scrollView.Content = content;
+        });
+
+        public static View GetContent(this Controls.ScrollView bindable) => (View)bindable.GetValue(ContentProperty);
+        public static void SetContent(this Controls.ScrollView bindable, object value) => bindable.SetValue(ContentProperty, value);
+    }
+}
+
 namespace Microsoft.Maui.Controls.Compatibility
 {
     public static class ScrollViewExtensions
