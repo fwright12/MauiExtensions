@@ -21,7 +21,23 @@ namespace Microsoft.Maui.Controls.Extensions
         public DataTemplate? Template { get; set; }
         public object? Source { get; set; }
 
-        public BindingBase ProvideValue(IServiceProvider serviceProvider) => new Binding(Path, BindingMode, IPlatformApplication.Current?.Services.GetService<TemplateToViewConverter>(), Template, source: Source);
+        public BindingBase ProvideValue(IServiceProvider serviceProvider)
+        {
+            TemplateToViewConverter? converter;
+            if (serviceProvider?.GetService<IProvideValueTarget>()?.TargetObject is Controls.VisualElement ve)
+            {
+                converter = new TemplateToViewConverter
+                {
+                    Container = ve
+                };
+            }
+            else
+            {
+                converter = IPlatformApplication.Current?.Services.GetService<TemplateToViewConverter>();
+            }
+            
+            return new Binding(Path, BindingMode, converter, Template, source: Source);
+        }
 
         object IMarkupExtension.ProvideValue(IServiceProvider serviceProvider) => ProvideValue(serviceProvider);
     }

@@ -1,104 +1,85 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace Microsoft.Maui.Controls.Extensions;
 
-using System.Extensions;
-using System.Collections;
-
-namespace Microsoft.Maui.Controls
+public static class ResourceDictionaryExtensions
 {
-    public class Style<T> : IEnumerable
+    public static MauiAppBuilder UseExtensionsResources(this MauiAppBuilder app)
     {
-        private Style Value;
-
-        public Style() : this(new Style(typeof(T))) { }
-
-        public Style(Style style)
+        if (Application.Current != null)
         {
-            Value = style;
+            ResourceDataTemplateSelector.TryProcess(Application.Current.Resources);
+            Merge(Application.Current.Resources, new Styles());
         }
 
-        public void Add(Behavior behavior) => Value.Behaviors.Add(behavior);
-        public void Add(Setter setter) => Value.Setters.Add(setter);
-        public void Add(TriggerBase triggerBase) => Value.Triggers.Add(triggerBase);
+        return app;
+    }
 
-
-        public static implicit operator Style(Style<T> style) => style.Value;
-
-        public IEnumerator GetEnumerator()
+    public static IEnumerable<ResourceDictionary> AllDictionaries(this ResourceDictionary resourceDictionary)
+    {
+        foreach (var merged in resourceDictionary.MergedDictionaries)
         {
-            foreach(Behavior behavior in Value.Behaviors)
+            yield return merged;
+
+            foreach (var descendant in AllDictionaries(merged))
             {
-                yield return behavior;
-            }
-            foreach (Setter setter in Value.Setters)
-            {
-                yield return setter;
-            }
-            foreach (TriggerBase triggerBase in Value.Triggers)
-            {
-                yield return triggerBase;
+                yield return descendant;
             }
         }
     }
-}
 
-namespace Microsoft.Maui.Controls.Extensions
-{
-    public class StyleSetter<T> : IEnumerable<Setter>
+    public static void Merge(this ResourceDictionary rd, ResourceDictionary other)
     {
-        public Style Style;
-
-        public StyleSetter()
+        foreach (var key in EnumerateKeys(rd))
         {
-            Style = new Style(typeof(T));
+            if (!other.TryGetValue(key, out var value) || value is not Style otherStyle || rd[key] is not Style style)
+            {
+                continue;
+            }
+
+            other.Remove(key);
+            Merge(style, otherStyle);
         }
 
-        public static implicit operator Style(StyleSetter<T> style) => style.Style;
+        rd.MergedDictionaries.Add(other);
+    }
 
-        public void Add(Setter setter) => Style.Setters.Add(setter);
-
-        public IEnumerator<Setter> GetEnumerator()
+    public static void Merge(this Style style, Style other)
+    {
+        foreach (var behavior in other.Behaviors.ToArray())
         {
-            foreach(Setter setter in Style.Setters)
+            other.Behaviors.Remove(behavior);
+            style.Behaviors.Add(behavior);
+        }
+
+        foreach (var setter in other.Setters)
+        {
+            if (!style.Setters.Any(s => s.Property == setter.Property))
             {
-                yield return setter;
+                style.Setters.Add(setter);
             }
         }
 
-        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+        foreach (var trigger in other.Triggers.ToArray())
+        {
+            other.Triggers.Remove(trigger);
+            style.Triggers.Add(trigger);
+        }
     }
 
-    public static class ResourceDictionaryExtensions
+    public static IEnumerable<string> EnumerateKeys(this ResourceDictionary rd) => EnumerateAll(rd).Select(kvp => kvp.Key);
+    public static IEnumerable<object> EnumerateValues(this ResourceDictionary rd) => EnumerateAll(rd).Select(kvp => kvp.Value);
+    public static IEnumerable<KeyValuePair<string, object>> EnumerateAll(this ResourceDictionary rd)
     {
-        /*public static ResourceDictionary Populate<T>(this ResourceDictionary dictionary, Action<T> behavior, params Setter[] setters)
-            where T : BindableObject
+        foreach (var kvp in rd)
         {
-            dictionary.AddStyle<T>(behavior, setters);
-            return dictionary;
+            yield return kvp;
         }
 
-        public static ResourceDictionary Populate<T>(this ResourceDictionary dictionary, params Setter[] setters)
-            where T : BindableObject
+        foreach (var merged in rd.MergedDictionaries)
         {
-            dictionary.AddStyle<T>(setters);
-            return dictionary;
-        }*/
-
-        //public static Style AddStyle<T>(this ResourceDictionary dictionary, params Setter[] setters)
-        //  where T : BindableObject //=> dictionary.AddStyle<T>(null, setters);
-
-        public static Style AddBehavior<T>(this Style style, Action<T> behavior)
-            where T : BindableObject
-        {
-            style.Behaviors.Add(new BehaviorFunc<T>(behavior));
-            return style;
+            foreach (var kvp in EnumerateAll(merged))
+            {
+                yield return kvp;
+            }
         }
-
-        public static void AddBehavior<T>(this ResourceDictionary dictionary, Action<T> behavior) where T : BindableObject => dictionary.Add(new Style(typeof(T)).AddBehavior(behavior));
-
-        //public static void AddStyle<T>(this ResourceDictionary dictionary, Action<T> behavior, bool applyToDerivedTypes = true) where T : BindableObject => dictionary.AddStyle<T>(new Style(typeof(T)) { ApplyToDerivedTypes = applyToDerivedTypes }, behavior);
     }
 }

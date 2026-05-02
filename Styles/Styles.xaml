@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ResourceDictionary xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+                    xmlns:ext="clr-namespace:Microsoft.Maui.Controls.Extensions;assembly=MauiExtensions"
+                    x:Class="Microsoft.Maui.Controls.Extensions.Styles">
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="/Styles/ControlStyles.xaml;assembly=MauiExtensions" />
+    </ResourceDictionary.MergedDictionaries>
+
+    <Style TargetType="ItemsView"
+           ApplyToDerivedTypes="True">
+        <Style.Behaviors>
+            <ext:AutoSelectTemplateBehavior TemplateSelectorProperty="{Static ItemsView.ItemTemplateProperty}" />
+        </Style.Behaviors>
+    </Style>
+
+    <Style TargetType="IBindableLayout"
+           ApplyToDerivedTypes="True">
+        <Style.Behaviors>
+            <ext:AutoSelectBindableLayoutTemplateBehavior />
+        </Style.Behaviors>
+    </Style>
+</ResourceDictionary>

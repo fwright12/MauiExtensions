@@ -179,7 +179,7 @@ namespace Microsoft.Maui.Controls
             set => SetValue(ElementProperty, value);
         }
 
-        public double Value => GetPoint().Y;
+        public double Value { get; private set; }
         public SnapPointsAlignment Alignment
         {
             get => _Alignment;
@@ -223,7 +223,7 @@ namespace Microsoft.Maui.Controls
             return value;
         }
 
-        private void ParentWillChange(object sender, PropertyChangingEventArgs e)
+        private void ParentWillChange(object? sender, PropertyChangingEventArgs e)
         {
             if (e.PropertyName == nameof(Parent) && Parent != null)
             {
@@ -231,7 +231,7 @@ namespace Microsoft.Maui.Controls
             }
         }
 
-        private void ParentDidChange(object sender, PropertyChangedEventArgs e)
+        private void ParentDidChange(object? sender, PropertyChangedEventArgs e)
         {
             if (e.PropertyName == nameof(Parent) && Parent != null)
             {
@@ -240,7 +240,7 @@ namespace Microsoft.Maui.Controls
             }
         }
 
-        private void DrawerContentChanged(object sender, PropertyChangedEventArgs e)
+        private void DrawerContentChanged(object? sender, PropertyChangedEventArgs e)
         {
             if (e.PropertyName == nameof(DrawerView.DrawerContentView))
             {
@@ -269,9 +269,18 @@ namespace Microsoft.Maui.Controls
             }
         }
 
-        private void PositionChanged(object sender, EventArgs e) => PositionChanged();
-        private void PositionChanged(object sender, PropertyChangedEventArgs e) => PositionChanged();
-        private void PositionChanged() => OnPropertyChanged(nameof(Value));
+        private void PositionChanged(object? sender, EventArgs e) => PositionChanged();
+        private void PositionChanged(object? sender, PropertyChangedEventArgs e) => PositionChanged();
+        private void PositionChanged()
+        {
+            Value = GetPoint().Y;
+            if (Element != null && (!Element.IsSet(VisualElement.WidthProperty) || !Element.IsSet(VisualElement.HeightProperty)))
+            {
+                Value += 1;
+            }
+
+            OnPropertyChanged(nameof(Value));
+        }
     }
 
     [XamlCompilation(XamlCompilationOptions.Compile)]

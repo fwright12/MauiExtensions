@@ -80,6 +80,9 @@
 		<MauiXaml Update="Styles\ControlStyles.xaml">
 			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
+		<MauiXaml Update="Styles\Styles.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</MauiXaml>
 		<MauiXaml Update="Views\DrawerView.xaml">
 			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
