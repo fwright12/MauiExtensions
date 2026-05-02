@@ -146,7 +146,7 @@ namespace Microsoft.Maui.Controls.Extensions
 
             Point point = Point.Zero;
 
-            if (child?.Parent is ScrollView scroll)
+            if (child?.Parent is Controls.ScrollView scroll)
             {
                 point = point.Subtract(scroll.ScrollPos());
             }
