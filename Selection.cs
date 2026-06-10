@@ -49,8 +49,6 @@ namespace Microsoft.Maui.Controls
 
         public static readonly BindableProperty SelectedItemsProperty = BindableProperty.CreateAttached("SelectedItems", typeof(SelectionList), typeof(Selectable), null, BindingMode.TwoWay, propertyChanged: (bindable, oldValue, newValue) =>
         {
-            // TODO Needs to be updated to remove references to Compatibility namespace
-            //return;
             Selectable selectable = (Selectable)bindable;
             SelectionList oldList = (SelectionList)oldValue;
             SelectionList list = (SelectionList)newValue;
@@ -184,6 +182,7 @@ namespace Microsoft.Maui.Controls
                 var selected = selectedItems.Contains(visualElement.BindingContext);
 
                 visualElement.SetIsSelected(selected);
+                visualElement.IsEnabled = !selected || selectable.GetSelectionMode() != SelectionMode.MandatorySingle;
                 if (selected)
                 {
                     indices.Add(i);
