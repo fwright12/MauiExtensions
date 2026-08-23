@@ -1,24 +1,11 @@
 ﻿using Microsoft.Maui.Controls.Compatibility;
 using System.ComponentModel;
 
-namespace Microsoft.Maui.Controls
-{
-    public class RemoveBindingTriggerAction : TriggerAction<BindableObject>
-    {
-        public BindableProperty? Property { get; set; }
-
-        protected override void Invoke(BindableObject sender)
-        {
-            sender.RemoveBinding(Property);
-        }
-    }
-}
-
 namespace Microsoft.Maui.Controls.Extensions
 {
     public static class VisualElement
     {
-        public static readonly BindableProperty AspectRequestProperty = BindableProperty.CreateAttached(nameof(GetAspectRequest).Substring(3), typeof(double), typeof(VisualElement), -1.0, defaultValueCreator: bindable =>
+        public static readonly BindableProperty AspectRequestProperty = BindableProperty.CreateAttached(nameof(GetAspectRequest).Substring(3), typeof(double), typeof(VisualElement), -1d, defaultValueCreator: bindable =>
         {
             AspectRequestSetup((Controls.VisualElement)bindable);
             return -1d;
@@ -28,12 +15,44 @@ namespace Microsoft.Maui.Controls.Extensions
         public static double GetAspectRequest(this Controls.VisualElement bindable) => (double)bindable.GetValue(AspectRequestProperty);
         public static void SetAspectRequest(this Controls.VisualElement bindable, double value) => bindable.SetValue(AspectRequestProperty, value);
 
+        private static readonly BindableProperty ArrangedLengthProperty = BindableProperty.Create(nameof(GetArrangedLength).Substring(3), typeof(double), typeof(Controls.VisualElement));
+
+        private static double GetArrangedLength(this Controls.VisualElement visualElement) => (double)visualElement.GetValue(ArrangedLengthProperty);
+        private static void SetArrangedLength(this Controls.VisualElement visualElement, double value) => visualElement.SetValue(ArrangedLengthProperty, value);
+
+        private static readonly MauiReusableProjectionFactory ProjectionFactory = new MauiReusableProjectionFactory();
+
+        private static ViewProjection Rotate(this ViewProjection projection) => projection is ViewProjection.Horizontal ? projection.Object.Project<ViewProjection.Vertical>(ProjectionFactory) : projection.Object.Project<ViewProjection.Horizontal>(ProjectionFactory);
+
         private static void AspectRequestSetup(Controls.VisualElement visualElement)
         {
-            bool controlWidth = false, controlHeight = false;
+            bool canControlWidth = true, canControlHeight = true;
 
-            visualElement.SizeChanged += sizeChanged;
-            sizeChanged(visualElement, EventArgs.Empty);
+            widthRequestChanged();
+            heightRequestChanged();
+            measureInvalidated(visualElement, EventArgs.Empty);
+
+            void sizeRequestChanged(object? sender, PropertyChangedEventArgs e)
+            {
+                if (e.PropertyName == Controls.VisualElement.WidthRequestProperty.PropertyName)
+                {
+                    widthRequestChanged();
+                }
+                else if (e.PropertyName == Controls.VisualElement.HeightRequestProperty.PropertyName)
+                {
+                    heightRequestChanged();
+                }
+            }
+
+            void widthRequestChanged()
+            {
+                canControlWidth = !visualElement.IsSet(Controls.VisualElement.WidthRequestProperty);
+            }
+
+            void heightRequestChanged()
+            {
+                canControlHeight = !visualElement.IsSet(Controls.VisualElement.HeightRequestProperty);
+            }
 
             async void sizeChanged(object? sender, EventArgs e)
             {
@@ -43,74 +62,100 @@ namespace Microsoft.Maui.Controls.Extensions
                     return;
                 }
                 // Initial layout hasn't happened yet
-                else if (ve.Frame.Size == Size.Zero || ve.Width < 0 || ve.Height < 0)
-                {
-                    return;
-                }
-                // We tried to set the width, and it didn't work
-                else if (controlWidth && !AreSameSize(ve.Width, ve.WidthRequest))
-                {
-                    //return;
-                }
-                // We tried to set the height, and it didn't work
-                else if (controlHeight && !AreSameSize(ve.Height, ve.HeightRequest))
-                {
-                    //return;
-                }
-
-                //Print.Log(ve.Height);
-                var aspect = ve.GetAspectRequest();
-                if (AreSameSize(ve.Height * aspect, ve.Width, 1.0f))
+                if (ve.Frame.Size == Size.Zero || ve.Width < 0 || ve.Height < 0)
                 {
                     return;
                 }
 
-                var adjustWidth = ve.Width / ve.Height < aspect;
+                var aspectRequest = ve.GetAspectRequest();
 
-                // WidthRequest was set, and not by us - leave it alone
-                if (ve.IsSet(Controls.VisualElement.WidthRequestProperty) && !controlWidth)
+                Type projectionAxis;
+                bool didOverflowBounds = true;
+                // If a width/height request that we set overflows bounds, we will have to use to other direction
+                if (canControlHeight && DidOverflowBounds<ViewProjection.Horizontal>(ve, canControlWidth))
                 {
-                    controlWidth = false;
-                    controlHeight = true;
+                    projectionAxis = typeof(ViewProjection.Horizontal);
                 }
-                // HeightRequest was set, and not by us - leave it alone
-                else if (ve.IsSet(Controls.VisualElement.HeightRequestProperty) && !controlHeight)
+                else if (canControlWidth && DidOverflowBounds<ViewProjection.Vertical>(ve, canControlHeight))
                 {
-                    controlWidth = true;
-                    controlHeight = false;
+                    projectionAxis = typeof(ViewProjection.Vertical);
                 }
                 else
                 {
-                    controlWidth = AreSameSize(ve.DesiredSize.Width, ve.Width);
-                    controlHeight = AreSameSize(ve.DesiredSize.Height, ve.Height);
-
-                    // View is likely constrained in both directions by its parent - make it smaller so we don't overflow bounds
-                    if (!controlWidth && !controlHeight)
+                    // Allow tolerance of 1 to account for minor differences between requested and actual size
+                    if (Math.Abs(Math.Truncate(ve.Width) - Math.Truncate(ve.Height * aspectRequest)) <= 1)
                     {
-                        controlWidth = !(controlHeight = adjustWidth);
+                        return;
+                    }
+
+                    didOverflowBounds = false;
+
+                    var aspect = ve.Width / ve.Height;
+                    // We will try to make the view bigger, provided we can control in that direction
+                    if (aspect < aspectRequest || (canControlWidth && !canControlHeight))
+                    {
+                        projectionAxis = typeof(ViewProjection.Vertical);
+                    }
+                    else
+                    {
+                        projectionAxis = typeof(ViewProjection.Horizontal);
                     }
                 }
+
+                var projection = (ViewProjection)ve.Project(projectionAxis, ProjectionFactory);
+
+                double length;
+                // If we overflowed bounds, use the size in that direction stored on the previous layout cycle
+                if (didOverflowBounds)
+                {
+                    length = GetArrangedLength(ve);
+                }
+                else
+                {
+                    length = projection.Length;
+                    SetArrangedLength(ve, projection.Rotate().Length);
+                }
+
+                double orthogonalLength = length * Math.Pow(aspectRequest, projection is ViewProjection.Horizontal ? -1 : 1);
+                // We will need to control both width and height, unless alignment is fill and parent is already controlling
+                if (projection.Alignment == Primitives.LayoutAlignment.Fill)
+                {
+                    length = -1;
+                }
+
+                Size sizeRequest = ((SizeProjection)ProjectionFactory.Create(projection.SizeProjectionType)).Create(length, orthogonalLength);
 
                 // Make sure we start a new layout cycle
                 await Task.Yield();
 
-                //ve.SizeChanged -= sizeChanged;
                 ve.MeasureInvalidated -= measureInvalidated;
+                ve.PropertyChanged -= sizeRequestChanged;
 
-                //measureInvalidated(ve, e);                
-
-                // If view is completely unconstrained, we should control both dimensions to avoid the view trying to remeasure itself if one is changed
-                if (controlWidth)
+                if (canControlWidth)
                 {
-                    ve.WidthRequest = controlHeight && !adjustWidth ? ve.Width : ve.Height * aspect;
+                    if (sizeRequest.Width == -1)
+                    {
+                        ve.ClearValue(Controls.VisualElement.WidthRequestProperty);
+                    }
+                    else
+                    {
+                        ve.WidthRequest = sizeRequest.Width;
+                    }
                 }
-                if (controlHeight)
+                if (canControlHeight)
                 {
-                    ve.HeightRequest = controlWidth && adjustWidth ? ve.Height : ve.Width / aspect;
+                    if (sizeRequest.Height == -1)
+                    {
+                        ve.ClearValue(Controls.VisualElement.HeightRequestProperty);
+                    }
+                    else
+                    {
+                        ve.HeightRequest = sizeRequest.Height;
+                    }
                 }
 
                 ve.MeasureInvalidated += measureInvalidated;
-                //ve.SizeChanged += sizeChanged;
+                ve.PropertyChanged += sizeRequestChanged;
             }
 
             void measureInvalidated(object? sender, EventArgs e)
@@ -124,21 +169,27 @@ namespace Microsoft.Maui.Controls.Extensions
                 ve.SizeChanged -= sizeChanged;
                 ve.SizeChanged += sizeChanged;
 
-                //await Task.Delay(1);
+                ve.PropertyChanged -= sizeRequestChanged;
 
-                if (controlWidth)
+                if (canControlWidth)
                 {
-                    ve.WidthRequest = -1;
+                    ve.ClearValue(Controls.VisualElement.WidthRequestProperty);
                 }
-                if (controlHeight)
+                if (canControlHeight)
                 {
-                    ve.HeightRequest = -1;
+                    ve.ClearValue(Controls.VisualElement.HeightRequestProperty);
                 }
+
+                ve.PropertyChanged += sizeRequestChanged;
             }
         }
 
-        private static bool AreSameSize(double size1, double size2) => AreSameSize(size1, size2, 0.001f);
-        private static bool AreSameSize(double size1, double size2, float tolerance) => Math.Abs(size1 - size2) < tolerance;
+        // .NET MAUI will arrange the view outside of the allocated bounds if it can't fit. If an explicit size request was set, and it was set by us and not the user, indicate that we caused an overflow
+        private static bool DidOverflowBounds<T>(Controls.VisualElement visualElement, bool canControl) where T : ViewProjection
+        {
+            var projection = visualElement.Project<T>(ProjectionFactory);
+            return projection.FrameLocation.Value < 0 && visualElement.IsSet(projection.LengthRequestProperty) && canControl;
+        }
 
         public static Point PositionOn(this Controls.VisualElement child, Controls.VisualElement parent = null)
         {
