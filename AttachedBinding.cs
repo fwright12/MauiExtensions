@@ -3,6 +3,7 @@ using System.Globalization;
 
 namespace Microsoft.Maui.Controls.Extensions
 {
+    [ContentProperty(nameof(Path))]
     public class AttachedBindingExtension : IMarkupExtension<BindingBase>
     {
         public string Path { get; set; } = Binding.SelfPath;

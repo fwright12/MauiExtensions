@@ -1,6 +1,6 @@
 ﻿namespace Microsoft.Maui.Controls.Extensions;
 
-public class ThicknessExtension : IMarkupExtension<MultiBinding>
+public class ThicknessExtension : IMarkupExtension<object>
 {
     public object? Left { get; set; }
     public object? Top { get; set; }
@@ -12,7 +12,7 @@ public class ThicknessExtension : IMarkupExtension<MultiBinding>
 
     public object? Uniform { get; set; }
 
-    public MultiBinding ProvideValue(IServiceProvider serviceProvider)
+    public object ProvideValue(IServiceProvider serviceProvider)
     {
         var valueProvider = serviceProvider?.GetService<IProvideValueTarget>() ?? throw new ArgumentException();
         var targetProperty = (valueProvider.TargetObject as Setter)?.Property ?? valueProvider.TargetProperty as BindableProperty;
@@ -52,7 +52,14 @@ public class ThicknessExtension : IMarkupExtension<MultiBinding>
         binding.Add(Bottom, (Thickness aggregate, double value) => new Thickness(aggregate.Left,
          aggregate.Top, aggregate.Right, value));
 
-        return binding;
+        if (binding.Bindings.Count == 0)
+        {
+            return (binding.ConverterParameter as Func<ArraySegment<object>, object>)?.Invoke(ArraySegment<object>.Empty) ?? seed;
+        }
+        else
+        {
+            return binding;
+        }
     }
 
     object IMarkupExtension.ProvideValue(IServiceProvider serviceProvider) => ProvideValue(serviceProvider);

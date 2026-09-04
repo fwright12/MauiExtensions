@@ -7,6 +7,14 @@
                     x:Class="Microsoft.Maui.Controls.ControlStyles">
     <!-- ================================== VIEWS ================================== -->
 
+    <Style TargetType="Button"
+           Class="Destructive">
+        <Setter Property="TextColor"
+                Value="{OnPlatform iOS='Red'}" />
+        <Setter Property="BackgroundColor"
+                Value="{OnPlatform Android='Red'}" />
+    </Style>
+    
     <Style TargetType="ScrollView"
            Class="HidesTabBarOnScroll">
         <Style.Behaviors>

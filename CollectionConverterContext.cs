@@ -119,11 +119,6 @@ public abstract class CollectionConverterContext<T1, T2> : CollectionConverterCo
 
     private void PartialCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        if (Collection1.Count() > 0 || Collection2.Count() > 0)
-        {
-            ;
-        }
-
         if (IsSyncing)
         {
             return;
