@@ -322,6 +322,8 @@ namespace Microsoft.Maui.Controls
             //drawer.ChangeState();
         });
 
+        public static readonly BindableProperty IsDrawerVisibleProperty = BindableProperty.Create(nameof(IsDrawerVisible), typeof(bool), typeof(DrawerView), true);
+
         /*public static readonly BindableProperty DrawerContentProperty = BindableProperty.Create(nameof(DrawerContent), typeof(object), typeof(DrawerView), propertyChanged: (bindable, oldValue, newValue) =>
         {
             DrawerView drawer = (DrawerView)bindable;
@@ -335,6 +337,12 @@ namespace Microsoft.Maui.Controls
         {
             get => (bool)GetValue(IsOpenProperty);
             set => SetValue(IsOpenProperty, value);
+        }
+
+        public bool IsDrawerVisible
+        {
+            get => (bool)GetValue(IsDrawerVisibleProperty);
+            set => SetValue(IsDrawerVisibleProperty, value);
         }
 
         private static void SetDrawerContent(DrawerView drawerView, View view)

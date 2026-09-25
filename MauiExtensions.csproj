@@ -63,6 +63,9 @@
 		<Compile Update="Styles\ControlStyles.xaml.cs">
 			<DependentUpon>ControlStyles.xaml</DependentUpon>
 		</Compile>
+		<Compile Update="Templates\SimpleSelectTemplate.xaml.cs">
+		  <DependentUpon>SimpleSelectTemplate.xaml</DependentUpon>
+		</Compile>
 		<Compile Update="Views\DrawerView.xaml.cs">
 			<SubType>Code</SubType>
 			<DependentUpon>DrawerView.xaml</DependentUpon>
@@ -83,10 +86,16 @@
 		<MauiXaml Update="Styles\Styles.xaml">
 		  <Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
+		<MauiXaml Update="Templates\SimpleSelectTemplate.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</MauiXaml>
 		<MauiXaml Update="Views\DrawerView.xaml">
 			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 		<MauiXaml Update="Views\ExpandableContentView.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</MauiXaml>
+		<MauiXaml Update="Views\SelectView.xaml">
 		  <Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 	</ItemGroup>
