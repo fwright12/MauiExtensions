@@ -4,13 +4,33 @@ using static Microsoft.Maui.Controls.BindableProperty;
 namespace Microsoft.Maui.Controls.Extensions
 {
     [BindingValueConverter]
-    public class TemplateToViewConverter : IValueConverter<object, View>
+    public class TemplateToViewConverter : IValueConverter<object, View>, IMultiValueConverter
     {
         public BindableObject? Container { get; set; }
 
         public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture) => value == null && parameter is DataTemplateSelector ? null : Templates.CreateView(Container!, value, parameter as DataTemplate);
 
+        public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+        {
+            var obj = values.ElementAtOrDefault(0);
+            var template = values.ElementAtOrDefault(1) as DataTemplate;
+
+            if (obj == null && template == null)
+            {
+                return null!;
+            }
+            else
+            {
+                return Templates.CreateView(Container!, obj, template)!;
+            }
+        }
+
         public object? ConvertBack(View? value, Type targetType, object? parameter, CultureInfo culture) => value?.BindingContext ?? value;
+
+        public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
     }
 
     [ContentProperty(nameof(Path))]
@@ -18,7 +38,7 @@ namespace Microsoft.Maui.Controls.Extensions
     {
         public string? Path { get; set; } = Binding.SelfPath;
         public BindingMode BindingMode { get; set; } = BindingMode.Default;
-        public DataTemplate? Template { get; set; }
+        public object? Template { get; set; }
         public object? Source { get; set; }
 
         public BindingBase ProvideValue(IServiceProvider serviceProvider)
@@ -35,8 +55,23 @@ namespace Microsoft.Maui.Controls.Extensions
             {
                 converter = IPlatformApplication.Current?.Services.GetService<TemplateToViewConverter>();
             }
-            
-            return new Binding(Path, BindingMode, converter, Template, source: Source);
+
+            if (Template is BindingBase binding)
+            {
+                return new MultiBinding
+                {
+                    Converter = converter,
+                    Bindings =
+                    {
+                        new Binding(Path, BindingMode, source: Source),
+                        binding
+                    }
+                };
+            }
+            else
+            {
+                return new Binding(Path, BindingMode, converter, Template, source: Source);
+            }
         }
 
         object IMarkupExtension.ProvideValue(IServiceProvider serviceProvider) => ProvideValue(serviceProvider);
