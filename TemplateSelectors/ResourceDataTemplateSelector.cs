@@ -117,34 +117,40 @@ public class ResourceDataTemplateSelector : DataTemplateSelector
         return label;
     });
 
-    protected ResourceDataTemplateSelector() { }
+    public ResourceDictionary? Resources { get; set; }
 
     protected override DataTemplate OnSelectTemplate(object item, BindableObject container) => OnSelectTemplate(item.GetType(), container);
     protected DataTemplate OnSelectTemplate(Type type, BindableObject container)
     {
-        if (container is not Controls.VisualElement ve)
+        IEnumerable<ResourceDictionary> dicts;
+        if (Resources != null)
         {
-            throw new InvalidOperationException($"{nameof(ResourceDataTemplateSelector)} can only be used on a VisualElement");
+            dicts = [Resources];
+        }
+        else if (container is Controls.VisualElement ve)
+        {
+            dicts = GetAncestors(ve).OfType<Controls.VisualElement>().Select(ancestor => ancestor.Resources);
+            if (Application.Current != null)
+            {
+                dicts = dicts.Append(Application.Current.Resources);
+            }
+        }
+        else
+        {
+            throw new InvalidOperationException($"{nameof(Resources)} must be set if {nameof(ResourceDataTemplateSelector)} is not used on a VisualElement");
         }
 
-        var dicts = GetAncestors(ve).OfType<Controls.VisualElement>().Select(ancestor => ancestor.Resources);
-        if (Application.Current != null)
-        {
-            dicts = dicts.Append(Application.Current.Resources);
-        }
+        var typeHierarchy = TypeHierarchy(type).Distinct().ToArray();
 
         foreach (var dict in dicts)
         {
             TryProcess(dict);
 
-            for (var baseType = type; baseType != null; baseType = baseType.BaseType)
+            foreach (var baseType in typeHierarchy)
             {
-                foreach (var iType in AllInterfaces(baseType).Distinct().Prepend(baseType))
+                if (dict.TryGetValue(GetKey(baseType), out var value) && value is DataTypeTemplate dataTypeTemplate)
                 {
-                    if (dict.TryGetValue(GetKey(iType), out var value) && value is DataTypeTemplate dataTypeTemplate)
-                    {
-                        return dataTypeTemplate.Template;
-                    }
+                    return dataTypeTemplate.Template;
                 }
             }
         }
@@ -152,15 +158,22 @@ public class ResourceDataTemplateSelector : DataTemplateSelector
         return DEFAULT;
     }
 
-    private static IEnumerable<Type> AllInterfaces(Type type)
+    private static IEnumerable<Type> TypeHierarchy(Type type)
     {
-        foreach (var iType in type.GetInterfaces())
+        for (var baseType = type; baseType != null;)
         {
-            yield return iType;
+            yield return baseType;
 
-            foreach (var superInterface in AllInterfaces(iType))
+            IEnumerable<Type> interfaces = baseType.GetInterfaces();
+            baseType = baseType.BaseType;
+            if (baseType != null)
             {
-                yield return superInterface;
+                interfaces = interfaces.Except(baseType.GetInterfaces());
+            }
+
+            foreach (var iType in interfaces)
+            {
+                yield return iType;
             }
         }
     }
@@ -214,17 +227,21 @@ public class ResourceDataTemplateSelector : DataTemplateSelector
 
         try
         {
-            var dataTypes = resourceDictionary.Where(kvp => kvp.Value is DataTypeTemplate).ToArray();
-            foreach (var kvp in dataTypes)
+            // Inefficient, but we have no choice - ResourceDictionary provides no key/value enumeration over a dictionary merged via the Source property
+            foreach (var key in resourceDictionary.Keys.ToArray())
             {
-                var template = (DataTypeTemplate)kvp.Value;
-                if (template.Type == null)
+                var template = resourceDictionary[key] as DataTypeTemplate;
+                if (template == null)
+                {
+                    continue;
+                }
+                else if (template.Type == null)
                 {
                     System.Diagnostics.Debug.WriteLine($"{nameof(DataTypeTemplate.Type)} must be set on {nameof(DataTypeTemplate)} object to use as a resource");
                     continue;
                 }
 
-                resourceDictionary.Remove(kvp.Key);
+                resourceDictionary.Remove(key);
                 resourceDictionary.Add(GetKey(template.Type), template);
             }
 
